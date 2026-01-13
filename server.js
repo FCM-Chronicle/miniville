@@ -160,19 +160,48 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('gameState', room);
   });
 
-  // 구매
-  socket.on('purchase', ({ roomId, nickname, cardType, isLandmark }) => {
-    const room = rooms.get(roomId);
-    if (!room || !room.gameStarted) return;
+  // [교체 후 - 새로 추가할 코드]
+// 위의 주석 처리된 부분을 지우고 아래 코드로 교체하세요
 
-    const player = room.players.find(p => p.nickname === nickname);
-    if (!player) return;
+// 카드/랜드마크 가격 데이터 (io.on('connection') 바로 위에 추가)
+const CARD_COSTS = {
+  wheatField: 1, ranch: 1, forest: 3, mine: 6, appleOrchard: 3,
+  bakery: 1, convenience: 2, cheeseFactory: 5, furnitureFactory: 3, farmMarket: 2,
+  cafe: 2, restaurant: 3,
+  stadium: 6, tvStation: 7, businessCenter: 8
+};
 
-    // 가격 확인 및 구매 처리
-    // (실제 구현에서는 카드 가격 데이터 필요)
+const LANDMARK_COSTS = {
+  station: 4, mall: 10, park: 16, radio: 22
+};
+
+// 구매 이벤트 핸들러
+socket.on('purchase', ({ roomId, nickname, cardType, isLandmark }) => {
+  const room = rooms.get(roomId);
+  if (!room || !room.gameStarted) return;
+
+  const player = room.players.find(p => p.nickname === nickname);
+  if (!player) return;
+
+  const cost = isLandmark ? LANDMARK_COSTS[cardType] : CARD_COSTS[cardType];
+  
+  if (player.money < cost) return;
+
+  if (isLandmark) {
+    if (player.landmarks[cardType]) return;
+    player.money -= cost;
+    player.landmarks[cardType] = true;
+  } else {
+    // 보라색 카드는 1장 제한
+    const purpleCards = ['stadium', 'tvStation', 'businessCenter'];
+    if (purpleCards.includes(cardType) && player.cards[cardType] >= 1) return;
     
-    io.to(roomId).emit('gameState', room);
-  });
+    player.money -= cost;
+    player.cards[cardType] = (player.cards[cardType] || 0) + 1;
+  }
+  
+  io.to(roomId).emit('gameState', room);
+});
 
   // 턴 종료
   socket.on('endTurn', ({ roomId, nickname }) => {
