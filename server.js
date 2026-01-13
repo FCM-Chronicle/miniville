@@ -236,6 +236,32 @@ socket.on('purchase', ({ roomId, nickname, cardType, isLandmark }) => {
     if (landmarks.station && landmarks.mall && landmarks.park && landmarks.radio) {
       io.to(roomId).emit('gameWon', { winner: nickname });
       return;
+
+      socket.on('endTurn', ({ roomId, nickname }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameStarted) return;
+
+    const currentPlayer = room.players[room.currentTurn];
+    if (currentPlayer.nickname !== nickname) return;
+
+    // 승리 조건 확인
+    const landmarks = currentPlayer.landmarks;
+    if (landmarks.station && landmarks.mall && landmarks.park && landmarks.radio) {
+      io.to(roomId).emit('gameWon', { winner: nickname });
+      return;
+    }
+
+    // 재굴림 사용 플래그 초기화
+    currentPlayer.radioUsedThisTurn = false;
+
+    // 다음 턴
+    room.currentTurn = (room.currentTurn + 1) % room.players.length;
+    room.diceResult = null;
+    room.turnPhase = 'dice';
+    
+    io.to(roomId).emit('turnChanged', { room });
+  });
+      
     }
 
     // 다음 턴
