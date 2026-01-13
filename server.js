@@ -121,7 +121,7 @@ io.on('connection', (socket) => {
   });
 
   // 주사위 굴리기
-  socket.on('rollDice', ({ roomId, nickname, diceCount }) => {
+  socket.on('rollDice', ({ roomId, nickname, diceCount, isDouble }) => {
     const room = rooms.get(roomId);
     if (!room || !room.gameStarted) return;
 
@@ -139,8 +139,33 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('diceRolled', { 
       room, 
       dice,
-      player: nickname 
+      player: nickname,
+      isDouble: isDouble || false
     });
+  });
+
+  // 라디오 재굴림 (이전 효과 무효화)
+  socket.on('rerollDice', ({ roomId, nickname }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameStarted) return;
+
+    const currentPlayer = room.players[room.currentTurn];
+    if (currentPlayer.nickname !== nickname) return;
+    if (!currentPlayer.landmarks.radio) return;
+
+    // 이전 주사위 결과와 효과를 완전히 무효화
+    // 모든 플레이어의 돈을 턴 시작 시점으로 복원
+    if (room.turnStartState) {
+      room.players.forEach((player, idx) => {
+        player.money = room.turnStartState[idx].money;
+      });
+    }
+
+    room.diceResult = null;
+    room.turnPhase = 'dice';
+    
+    io.to(roomId).emit('rerollInitiated', { room });
+    console.log(`${nickname}이(가) 라디오 재굴림 사용 - 이전 효과 무효화`);
   });
 
   // 재굴림 요청
