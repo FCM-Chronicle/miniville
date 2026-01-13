@@ -102,14 +102,21 @@ document.getElementById('roll2').addEventListener('click', () => {
 });
 
 document.getElementById('reroll').addEventListener('click', () => {
-  // 재굴림 로직
+  // 재굴림 로직 - 이전 효과 무효화
   radioUsed = true;
   document.getElementById('reroll').style.display = 'none';
+  
+  // 서버에 재굴림 상태 전송 (이전 효과 취소)
+  socket.emit('rerollDice', { roomId: currentRoom.id, nickname: myNickname });
+  
+  // 주사위 버튼 다시 표시
   document.getElementById('roll1').style.display = 'block';
   const me = currentRoom.players.find(p => p.nickname === myNickname);
   if (me.landmarks.station) {
     document.getElementById('roll2').style.display = 'block';
   }
+  
+  showLog('이전 주사위 효과가 취소되었습니다. 다시 굴려주세요.');
 });
 
 // 턴 종료
