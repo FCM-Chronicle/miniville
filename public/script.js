@@ -89,12 +89,16 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
 // 주사위
 document.getElementById('roll1').addEventListener('click', () => {
   socket.emit('rollDice', { roomId: currentRoom.id, nickname: myNickname, diceCount: 1 });
-  document.getElementById('diceButtons').style.display = 'none';
+  document.getElementById('roll1').style.display = 'none';
+  document.getElementById('roll2').style.display = 'none';
+  document.getElementById('reroll').style.display = 'none';
 });
 
 document.getElementById('roll2').addEventListener('click', () => {
   socket.emit('rollDice', { roomId: currentRoom.id, nickname: myNickname, diceCount: 2 });
-  document.getElementById('diceButtons').style.display = 'none';
+  document.getElementById('roll1').style.display = 'none';
+  document.getElementById('roll2').style.display = 'none';
+  document.getElementById('reroll').style.display = 'none';
 });
 
 document.getElementById('reroll').addEventListener('click', () => {
@@ -257,6 +261,9 @@ function updateGameScreen(room) {
   // 주사위 버튼
   if (isMyTurn && room.turnPhase === 'dice') {
     document.getElementById('roll1').style.display = 'block';
+    document.getElementById('roll2').style.display = 'none';
+    document.getElementById('reroll').style.display = 'none';
+    
     if (me.landmarks.station) {
       document.getElementById('roll2').style.display = 'block';
     }
@@ -265,8 +272,11 @@ function updateGameScreen(room) {
       document.getElementById('reroll').style.display = 'block';
     }
   } else {
-    document.getElementById('diceButtons').style.display = 'none';
+    document.getElementById('roll1').style.display = 'none';
+    document.getElementById('roll2').style.display = 'none';
+    document.getElementById('reroll').style.display = 'none';
   }
+  
   
   // 건설 버튼
   document.getElementById('shopBtn').disabled = !(isMyTurn && room.turnPhase === 'build');
