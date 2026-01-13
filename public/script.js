@@ -352,15 +352,56 @@ function showDiceResult(dice) {
   });
 }
 
+// [교체 후 - 새로운 함수]
+// 위의 주석 처리된 함수를 지우고 아래 함수로 교체하세요
+
 function processEffects(room, dice) {
   const sum = dice.reduce((a, b) => a + b, 0);
+  const currentTurnIndex = room.currentTurn;
   const updates = [];
-  
-  // 간단한 효과 처리 (실제로는 더 복잡)
+
+  // 1단계: 빨간색 카드 (상대 턴에만)
+  room.players.forEach((player, idx) => {
+    if (idx === currentTurnIndex) return; // 현재 턴 플레이어 제외
+    
+    let earned = 0;
+    const currentPlayer = room.players[currentTurnIndex];
+    
+    // 카페 (3)
+    if (CARDS.cafe.numbers.includes(sum)) {
+      const count = player.cards.cafe || 0;
+      let perCard = 1;
+      if (player.landmarks.mall) perCard += 1;
+      const total = perCard * count;
+      
+      const canTake = Math.min(total, currentPlayer.money);
+      earned += canTake;
+      currentPlayer.money -= canTake;
+      
+      if (canTake > 0) showLog(`${player.nickname}님이 카페로 ${canTake}원을 받았습니다`);
+    }
+    
+    // 레스토랑 (9~10)
+    if (CARDS.restaurant.numbers.includes(sum)) {
+      const count = player.cards.restaurant || 0;
+      let perCard = 2;
+      if (player.landmarks.mall) perCard += 1;
+      const total = perCard * count;
+      
+      const canTake = Math.min(total, currentPlayer.money);
+      earned += canTake;
+      currentPlayer.money -= canTake;
+      
+      if (canTake > 0) showLog(`${player.nickname}님이 레스토랑으로 ${canTake}원을 받았습니다`);
+    }
+    
+    player.money += earned;
+  });
+
+  // 2단계: 파란색 카드 (모든 플레이어)
   room.players.forEach(player => {
     let earned = 0;
     
-    // 파란색 카드 (모든 턴)
     Object.entries(player.cards).forEach(([key, count]) => {
       const card = CARDS[key];
       if (card.color === 'blue' && card.numbers.includes(sum)) {
@@ -372,18 +413,111 @@ function processEffects(room, dice) {
       }
     });
     
-    updates.push({
-      nickname: player.nickname,
-      money: player.money + earned
-    });
-    
     if (earned > 0) {
+      player.money += earned;
       showLog(`${player.nickname}님이 ${earned}원을 받았습니다`);
     }
   });
+
+  // 3단계: 초록색 + 보라색 (현재 턴 플레이어만)
+  const currentPlayer = room.players[currentTurnIndex];
+  let earned = 0;
   
+  // 초록색 기본 카드
+  if (CARDS.bakery.numbers.includes(sum)) {
+    const count = currentPlayer.cards.bakery || 0;
+    let perCard = 1;
+    if (currentPlayer.landmarks.mall) perCard += 1;
+    earned += perCard * count;
+  }
+  
+  if (CARDS.convenience.numbers.includes(sum)) {
+    const count = currentPlayer.cards.convenience || 0;
+    let perCard = 3;
+    if (currentPlayer.landmarks.mall) perCard += 1;
+    earned += perCard * count;
+  }
+  
+  // 치즈 공장 (7) - 목장당 3원
+  if (CARDS.cheeseFactory.numbers.includes(sum)) {
+    const factoryCount = currentPlayer.cards.cheeseFactory || 0;
+    const ranchCount = currentPlayer.cards.ranch || 0;
+    earned += factoryCount * ranchCount * 3;
+    if (factoryCount > 0 && ranchCount > 0) {
+      showLog(`치즈공장 효과: 목장 ${ranchCount}장 × 3원 × ${factoryCount}공장`);
+    }
+  }
+  
+  // 가구 공장 (8) - 숲+광산당 3원
+  if (CARDS.furnitureFactory.numbers.includes(sum)) {
+    const factoryCount = currentPlayer.cards.furnitureFactory || 0;
+    const forestCount = currentPlayer.cards.forest || 0;
+    const mineCount = currentPlayer.cards.mine || 0;
+    const resources = forestCount + mineCount;
+    earned += factoryCount * resources * 3;
+    if (factoryCount > 0 && resources > 0) {
+      showLog(`가구공장 효과: (숲${forestCount}+광산${mineCount}) × 3원 × ${factoryCount}공장`);
+    }
+  }
+  
+  // 농산물 시장 (11~12) - 밀밭+사과당 2원
+  if (CARDS.farmMarket.numbers.includes(sum)) {
+    const marketCount = currentPlayer.cards.farmMarket || 0;
+    const wheatCount = currentPlayer.cards.wheatField || 0;
+    const appleCount = currentPlayer.cards.appleOrchard || 0;
+    const crops = wheatCount + appleCount;
+    earned += marketCount * crops * 2;
+    if (marketCount > 0 && crops > 0) {
+      showLog(`농산물시장 효과: (밀밭${wheatCount}+사과${appleCount}) × 2원 × ${marketCount}시장`);
+    }
+  }
+  
+  // 보라색 카드
+  // 경기장 (6) - 모두에게서 2원
+  if (CARDS.stadium.numbers.includes(sum) && (currentPlayer.cards.stadium || 0) > 0) {
+    room.players.forEach((player, idx) => {
+      if (idx === currentTurnIndex) return;
+      const take = Math.min(2, player.money);
+      player.money -= take;
+      earned += take;
+    });
+    showLog(`경기장 효과: 모두에게서 각 2원씩`);
+  }
+  
+  // TV방송국 (6) - 한명에게서 5원
+  if (CARDS.tvStation.numbers.includes(sum) && (currentPlayer.cards.tvStation || 0) > 0) {
+    // 돈이 가장 많은 상대 선택
+    const opponents = room.players
+      .map((p, idx) => ({ player: p, idx }))
+      .filter(({idx}) => idx !== currentTurnIndex && room.players[idx].money > 0)
+      .sort((a, b) => b.player.money - a.player.money);
+    
+    if (opponents.length > 0) {
+      const target = opponents[0].player;
+      const take = Math.min(5, target.money);
+      target.money -= take;
+      earned += take;
+      showLog(`TV방송국 효과: ${target.nickname}에게서 ${take}원`);
+    }
+  }
+  
+  // 비즈니스센터 (6) - 카드 교환 (UI 상호작용 필요하므로 일단 패스)
+  if (CARDS.businessCenter.numbers.includes(sum) && (currentPlayer.cards.businessCenter || 0) > 0) {
+    showLog(`비즈니스센터 효과 발동 가능! (구현 예정)`);
+  }
+  
+  currentPlayer.money += earned;
+
+  // 모든 플레이어 상태 업데이트
+  room.players.forEach(player => {
+    updates.push({
+      nickname: player.nickname,
+      money: player.money
+    });
+  });
+
   socket.emit('effectsProcessed', { roomId: room.id, updates });
-}
+        }
 
 function openShop() {
   const me = currentRoom.players.find(p => p.nickname === myNickname);
