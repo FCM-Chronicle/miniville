@@ -1,1 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>미니빌 🎲</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 로비 화면 -->
+  <div id="lobby" class="screen active">
+    <div class="container">
+      <h1 class="title">🎲 미니빌</h1>
+      
+      <div class="input-group">
+        <input type="text" id="nicknameInput" placeholder="닉네임 입력" maxlength="10">
+      </div>
+      
+      <div class="input-group">
+        <input type="text" id="roomIdInput" placeholder="방 코드 (4자리)" maxlength="4">
+      </div>
+      
+      <div class="btn-group">
+        <button id="createRoomBtn" class="btn btn-primary">방 만들기</button>
+        <button id="joinRoomBtn" class="btn btn-secondary">방 입장</button>
+      </div>
+      
+      <div id="lobbyError" class="error-msg"></div>
+    </div>
+  </div>
 
+  <!-- 대기실 화면 -->
+  <div id="waitingRoom" class="screen">
+    <div class="container">
+      <div class="room-header">
+        <h2>방 코드: <span id="roomCode"></span></h2>
+        <p class="subtitle">친구에게 이 코드를 알려주세요</p>
+      </div>
+      
+      <div class="players-waiting">
+        <h3>플레이어 목록</h3>
+        <div id="playersList"></div>
+      </div>
+      
+      <button id="startGameBtn" class="btn btn-primary" style="display:none">게임 시작</button>
+      <div class="waiting-msg">방장이 게임을 시작하기를 기다리는 중...</div>
+    </div>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="game" class="screen">
+    <!-- 상대 플레이어 정보 -->
+    <div id="opponents" class="opponents-area">
+      <div class="opponents-scroll" id="opponentsScroll"></div>
+    </div>
+
+    <!-- 주사위 영역 -->
+    <div id="diceArea" class="dice-area">
+      <div id="diceDisplay" class="dice-display"></div>
+      <div id="diceButtons" class="dice-buttons">
+        <button id="roll1" class="btn btn-dice">🎲 1개 굴리기</button>
+        <button id="roll2" class="btn btn-dice" style="display:none">🎲🎲 2개 굴리기</button>
+        <button id="reroll" class="btn btn-special" style="display:none">📻 다시 굴리기</button>
+      </div>
+      <div id="turnInfo" class="turn-info"></div>
+    </div>
+
+    <!-- 내 도시 -->
+    <div id="myCity" class="my-city">
+      <div class="city-header">
+        <h3 id="myName"></h3>
+        <div class="money-display">💰 <span id="myMoney">3</span>원</div>
+      </div>
+      
+      <!-- 랜드마크 -->
+      <div class="landmarks" id="myLandmarks"></div>
+      
+      <!-- 내 카드들 -->
+      <div class="cards-grid" id="myCards"></div>
+    </div>
+
+    <!-- 하단 고정 바 -->
+    <div class="bottom-bar">
+      <button id="shopBtn" class="btn btn-bottom">🏪 구매</button>
+      <button id="undoBtn" class="btn btn-bottom" disabled>↩ Undo</button>
+      <button id="endTurnBtn" class="btn btn-bottom btn-end">턴 종료</button>
+    </div>
+
+    <!-- 로그 -->
+    <div id="gameLog" class="game-log"></div>
+  </div>
+
+  <!-- 구매 모달 -->
+  <div id="shopModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🏪 카드 구매</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="shop-tabs">
+          <button class="shop-tab active" data-tab="cards">시설</button>
+          <button class="shop-tab" data-tab="landmarks">랜드마크</button>
+        </div>
+        <div id="shopCards" class="shop-grid"></div>
+        <div id="shopLandmarks" class="shop-grid" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 특수 선택 모달 (보라색 카드용) -->
+  <div id="specialModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="specialTitle"></h3>
+      </div>
+      <div class="modal-body" id="specialBody"></div>
+    </div>
+  </div>
+
+  <!-- 승리 모달 -->
+  <div id="winModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🎉 게임 종료!</h2>
+      </div>
+      <div class="modal-body">
+        <p class="win-text"><span id="winnerName"></span>님이 승리했습니다!</p>
+        <button id="backToLobby" class="btn btn-primary">로비로</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
