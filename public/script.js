@@ -178,7 +178,7 @@ socket.on('gameStarted', ({ room }) => {
   showGameScreen(room);
 });
 
-socket.on('diceRolled', ({ room, dice, player }) => {
+socket.on('diceRolled', ({ room, dice, player, isReroll }) => {
   currentRoom = room;
   showDiceResult(dice);
   
@@ -186,6 +186,13 @@ socket.on('diceRolled', ({ room, dice, player }) => {
   setTimeout(() => {
     processEffects(room, dice);
   }, 1000);
+});
+
+// 재굴림 이벤트 추가
+socket.on('rerollInitiated', ({ room }) => {
+  currentRoom = room;
+  // 화면 상태만 업데이트 (효과는 무효화됨)
+  updateGameScreen(room);
 });
 
 socket.on('gameState', (room) => {
@@ -266,16 +273,14 @@ function updateGameScreen(room) {
     isMyTurn ? '당신의 턴입니다' : `${currentPlayer.nickname}님의 턴`;
   
   // 주사위 버튼
+  // 주사위 버튼
   if (isMyTurn && room.turnPhase === 'dice') {
     document.getElementById('roll1').style.display = 'block';
-    document.getElementById('roll2').style.display = 'none';
+    document.getElementById('roll2').style.display = me.landmarks.station ? 'block' : 'none';
     document.getElementById('reroll').style.display = 'none';
     
-    if (me.landmarks.station) {
-      document.getElementById('roll2').style.display = 'block';
-    }
-    
-    if (me.landmarks.radio && !radioUsed && room.diceResult) {
+    // 라디오방송국 효과: 주사위를 굴린 후에만 재굴림 가능
+    if (me.landmarks.radio && !radioUsed && room.diceResult && room.diceResult.length > 0) {
       document.getElementById('reroll').style.display = 'block';
     }
   } else {
