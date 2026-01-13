@@ -143,6 +143,26 @@ io.on('connection', (socket) => {
     });
   });
 
+  // 재굴림 요청
+  socket.on('rerollDice', ({ roomId, nickname }) => {
+    const room = rooms.get(roomId);
+    if (!room || !room.gameStarted) return;
+
+    const currentPlayer = room.players[room.currentTurn];
+    if (currentPlayer.nickname !== nickname) return;
+    if (!currentPlayer.landmarks.radio) return;
+
+    // 이전 주사위 결과와 효과를 무효화
+    room.diceResult = null;
+    room.turnPhase = 'dice';
+    
+    // 재굴림 사용 표시
+    currentPlayer.radioUsedThisTurn = true;
+    
+    io.to(roomId).emit('rerollInitiated', { room });
+    console.log(`${nickname}이(가) 재굴림 사용`);
+  });
+  
   // 효과 처리 완료
   socket.on('effectsProcessed', ({ roomId, updates }) => {
     const room = rooms.get(roomId);
