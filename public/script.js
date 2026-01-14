@@ -586,17 +586,17 @@ function processEffects(room, dice) {
   
   currentPlayer.money += earned;
 
-  // 모든 플레이어 상태 업데이트
-  room.players.forEach(player => {
-    updates.push({
-      nickname: player.nickname,
-      money: player.money
-    });
+  // 서버에 효과 처리 완료 알림
+  socket.emit('effectsProcessed', { 
+    roomId: room.id, 
+    nickname: myNickname,
+    updates: room.players.map(p => ({
+      nickname: p.nickname,
+      money: p.money
+    }))
   });
-
-  socket.emit('effectsProcessed', { roomId: room.id, updates });
-        }
-
+}
+        
 function openShop() {
   const me = currentRoom.players.find(p => p.nickname === myNickname);
   const modal = document.getElementById('shopModal');
