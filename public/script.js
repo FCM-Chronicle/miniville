@@ -29,12 +29,11 @@ const LANDMARKS = {
   park: { emoji: '🎡', name: '놀이공원', cost: 16, desc: '더블시 추가턴' },
   radio: { emoji: '📻', name: '라디오방송국', cost: 22, desc: '재굴림 1회' }
 };
-
-// 상태
+// 전역 변수
 let myNickname = '';
 let currentRoom = null;
 let undoStack = [];
-let radioUsed = false;
+let radioUsedThisTurn = false; // 라디오 재굴림 사용 여부
 
 // 화면 전환
 function showScreen(screenId) {
@@ -102,21 +101,20 @@ document.getElementById('roll2').addEventListener('click', () => {
 });
 
 document.getElementById('reroll').addEventListener('click', () => {
-  // 재굴림 로직 - 이전 효과 무효화
-  radioUsed = true;
-  document.getElementById('reroll').style.display = 'none';
-  
-  // 서버에 재굴림 상태 전송 (이전 효과 취소)
-  socket.emit('rerollDice', { roomId: currentRoom.id, nickname: myNickname });
-  
-  // 주사위 버튼 다시 표시
-  document.getElementById('roll1').style.display = 'block';
   const me = currentRoom.players.find(p => p.nickname === myNickname);
-  if (me.landmarks.station) {
-    document.getElementById('roll2').style.display = 'block';
+  
+  // 라디오방송국 재굴림인지 확인
+  if (me.landmarks.radio && !radioUsedThisTurn) {
+    // 라디오 재굴림: 이전 효과 무효화
+    radioUsedThisTurn = true;
+    socket.emit('rerollDice', { roomId: currentRoom.id, nickname: myNickname });
+    showLog('📻 라디오방송국 효과로 이전 결과가 취소되었습니다');
+  } else {
+    // 더블 재굴림: 이전 효과 유지
+    socket.emit('rollDice', { roomId: currentRoom.id, nickname: myNickname, diceCount: 1, isDouble: true });
   }
   
-  showLog('이전 주사위 효과가 취소되었습니다. 다시 굴려주세요.');
+  document.getElementById('reroll').style.display = 'none';
 });
 
 // 턴 종료
