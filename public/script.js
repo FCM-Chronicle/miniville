@@ -184,20 +184,42 @@ socket.on('diceRolled', ({ room, dice, player, isDouble }) => {
   setTimeout(() => {
     processEffects(room, dice);
     
-    // 더블 체크 (놀이공원 효과)
-    if (!isDouble && dice.length === 2 && dice[0] === dice[1]) {
+    // 효과 처리 후 페이즈 변경
+    setTimeout(() => {
       const me = room.players.find(p => p.nickname === myNickname);
-      if (me && me.landmarks.park && player === myNickname) {
+      const isMyTurn = player === myNickname;
+      
+      // 더블 체크 (놀이공원 효과)
+      const isDouble = dice.length === 2 && dice[0] === dice[1];
+      
+      if (isDouble && me && me.landmarks.park && isMyTurn) {
         showLog('🎡 놀이공원 효과! 한 번 더 굴릴 수 있습니다');
+        
+        // 놀이공원 더블 재굴림
         setTimeout(() => {
           document.getElementById('roll1').style.display = 'block';
           if (me.landmarks.station) {
             document.getElementById('roll2').style.display = 'block';
           }
+          // 더블 재굴림 버튼 (항상 표시)
           document.getElementById('reroll').style.display = 'block';
-        }, 1500);
+        }, 1000);
+      } else {
+        // 일반 주사위 결과 후 - 라디오 재굴림 버튼 표시 여부 체크
+        if (isMyTurn && me && me.landmarks.radio && !radioUsedThisTurn) {
+          setTimeout(() => {
+            room.turnPhase = 'dice'; // 다시 주사위 페이즈로
+            updateGameScreen(room);
+          }, 1000);
+        } else {
+          // 건설 페이즈로 이동
+          setTimeout(() => {
+            room.turnPhase = 'build';
+            updateGameScreen(room);
+          }, 1000);
+        }
       }
-    }
+    }, 1500);
   }, 1000);
 });
 
