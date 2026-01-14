@@ -361,32 +361,37 @@ io.on('connection', (socket) => {
   });
 
   // 게임 시작
-  socket.on('startGame', ({ roomId, nickname }) => {
-    const room = rooms.get(roomId);
-    
-    if (!room) return;
-    if (room.host !== nickname) {
-      socket.emit('error', { message: '방장만 시작할 수 있습니다' });
-      return;
-    }
-    if (room.players.length < 2) {
-      socket.emit('error', { message: '최소 2명 이상 필요합니다' });
-      return;
-    }
+socket.on('startGame', ({ roomId, nickname }) => {
+  const room = rooms.get(roomId);
+  
+  if (!room) {
+    socket.emit('error', { message: '방을 찾을 수 없습니다' });
+    return;
+  }
+  if (room.host !== nickname) {
+    socket.emit('error', { message: '방장만 시작할 수 있습니다' });
+    return;
+  }
+  if (room.players.length < 2) {
+    socket.emit('error', { message: '최소 2명 이상 필요합니다' });
+    return;
+  }
 
-    room.gameStarted = true;
-    room.currentTurn = 0;
-    room.turnPhase = 'dice';
-    
-    // 턴 시작 상태 저장
-    room.turnStartState = room.players.map(p => ({
-      money: p.money
-    }));
-    
-    io.to(roomId).emit('gameStarted', { room });
-    console.log(`게임 시작: ${roomId}`);
-  });
-
+  room.gameStarted = true;
+  room.currentTurn = 0;
+  room.turnPhase = 'dice';
+  
+  // 턴 시작 상태 저장
+  room.turnStartState = room.players.map(p => ({
+    money: p.money
+  }));
+  
+  // 방 전체에 브로드캐스트 (현재 소켓 포함)
+  io.to(roomId).emit('gameStarted', { room });
+  
+  console.log(`게임 시작: ${roomId}, 플레이어: ${room.players.map(p => p.nickname).join(', ')}`);
+});
+  
   // 주사위 굴리기
   socket.on('rollDice', ({ roomId, nickname, diceCount, isParkBonus }) => {
     const room = rooms.get(roomId);
