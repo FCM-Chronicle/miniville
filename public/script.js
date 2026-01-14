@@ -177,7 +177,7 @@ socket.on('roomJoined', ({ room, reconnected }) => {
 
 socket.on('playerJoined', ({ room }) => {
   currentRoom = room;
-  updatePlayersList(room);
+  showWaitingRoom(room);
 });
 
 socket.on('gameStarted', ({ room }) => {
