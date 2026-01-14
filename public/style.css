@@ -603,3 +603,10 @@ input[type="text"]:focus {
     grid-template-columns: repeat(2, 1fr);
   }
   }
+
+.btn.disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc !important;
+}
