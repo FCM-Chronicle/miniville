@@ -176,14 +176,42 @@ socket.on('gameStarted', ({ room }) => {
   showGameScreen(room);
 });
 
-socket.on('diceRolled', ({ room, dice, player, isReroll }) => {
+socket.on('diceRolled', ({ room, dice, player, isDouble }) => {
   currentRoom = room;
   showDiceResult(dice);
   
   // 효과 처리
   setTimeout(() => {
     processEffects(room, dice);
+    
+    // 더블 체크 (놀이공원 효과)
+    if (!isDouble && dice.length === 2 && dice[0] === dice[1]) {
+      const me = room.players.find(p => p.nickname === myNickname);
+      if (me && me.landmarks.park && player === myNickname) {
+        showLog('🎡 놀이공원 효과! 한 번 더 굴릴 수 있습니다');
+        setTimeout(() => {
+          document.getElementById('roll1').style.display = 'block';
+          if (me.landmarks.station) {
+            document.getElementById('roll2').style.display = 'block';
+          }
+          document.getElementById('reroll').style.display = 'block';
+        }, 1500);
+      }
+    }
   }, 1000);
+});
+
+// 라디오 재굴림 이벤트 추가
+socket.on('rerollInitiated', ({ room }) => {
+  currentRoom = room;
+  updateGameScreen(room);
+  
+  // 주사위 버튼 다시 표시
+  const me = room.players.find(p => p.nickname === myNickname);
+  document.getElementById('roll1').style.display = 'block';
+  if (me.landmarks.station) {
+    document.getElementById('roll2').style.display = 'block';
+  }
 });
 
 // 재굴림 이벤트 추가
@@ -200,7 +228,7 @@ socket.on('gameState', (room) => {
 
 socket.on('turnChanged', ({ room }) => {
   currentRoom = room;
-  radioUsed = false;
+  radioUsedThisTurn = false; // 턴이 바뀌면 라디오 사용 플래그 초기화
   updateGameScreen(room);
   
   const currentPlayer = room.players[room.currentTurn];
@@ -270,16 +298,24 @@ function updateGameScreen(room) {
   document.getElementById('turnInfo').textContent = 
     isMyTurn ? '당신의 턴입니다' : `${currentPlayer.nickname}님의 턴`;
   
+  
   // 주사위 버튼
   // 주사위 버튼
   if (isMyTurn && room.turnPhase === 'dice') {
     document.getElementById('roll1').style.display = 'block';
-    document.getElementById('roll2').style.display = me.landmarks.station ? 'block' : 'none';
-    document.getElementById('reroll').style.display = 'none';
     
-    // 라디오방송국 효과: 주사위를 굴린 후에만 재굴림 가능
-    if (me.landmarks.radio && !radioUsed && room.diceResult && room.diceResult.length > 0) {
+    // 기차역이 있으면 2개 굴리기 버튼 표시
+    if (me.landmarks.station) {
+      document.getElementById('roll2').style.display = 'block';
+    } else {
+      document.getElementById('roll2').style.display = 'none';
+    }
+    
+    // 라디오방송국 재굴림 버튼: 주사위를 이미 굴렸고, 아직 사용 안 했을 때
+    if (me.landmarks.radio && !radioUsedThisTurn && room.diceResult && room.diceResult.length > 0) {
       document.getElementById('reroll').style.display = 'block';
+    } else {
+      document.getElementById('reroll').style.display = 'none';
     }
   } else {
     document.getElementById('roll1').style.display = 'none';
