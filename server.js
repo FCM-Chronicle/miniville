@@ -189,9 +189,12 @@ io.on('connection', (socket) => {
   });
   
   // 효과 처리 완료
-  socket.on('effectsProcessed', ({ roomId, updates }) => {
+  socket.on('effectsProcessed', ({ roomId, nickname, updates }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !room.gameStarted) return;
+
+    const currentPlayer = room.players[room.currentTurn];
+    if (currentPlayer.nickname !== nickname) return; // 현재 턴 플레이어만 처리 가능
 
     // 플레이어 상태 업데이트
     updates.forEach(update => {
@@ -200,6 +203,11 @@ io.on('connection', (socket) => {
         player.money = update.money;
       }
     });
+
+    room.turnPhase = 'build';
+    io.to(roomId).emit('gameState', room);
+    console.log(`효과 처리 완료 - ${nickname}, 페이즈: build`);
+  });
 
     room.turnPhase = 'build';
     io.to(roomId).emit('gameState', room);
