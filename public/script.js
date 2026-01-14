@@ -180,46 +180,35 @@ socket.on('diceRolled', ({ room, dice, player, isDouble }) => {
   currentRoom = room;
   showDiceResult(dice);
   
-  // 효과 처리
+  const me = currentRoom.players.find(p => p.nickname === myNickname);
+  const isMyTurn = player === myNickname;
+  
+  // 효과 처리 (현재 턴 플레이어만)
   setTimeout(() => {
-    processEffects(room, dice);
+    if (isMyTurn) {
+      processEffects(room, dice);
+    }
     
-    // 효과 처리 후 페이즈 변경
-    setTimeout(() => {
-      const me = room.players.find(p => p.nickname === myNickname);
-      const isMyTurn = player === myNickname;
-      
-      // 더블 체크 (놀이공원 효과)
-      const isDouble = dice.length === 2 && dice[0] === dice[1];
-      
-      if (isDouble && me && me.landmarks.park && isMyTurn) {
-        showLog('🎡 놀이공원 효과! 한 번 더 굴릴 수 있습니다');
-        
-        // 놀이공원 더블 재굴림
-        setTimeout(() => {
-          document.getElementById('roll1').style.display = 'block';
-          if (me.landmarks.station) {
-            document.getElementById('roll2').style.display = 'block';
-          }
-          // 더블 재굴림 버튼 (항상 표시)
-          document.getElementById('reroll').style.display = 'block';
-        }, 1000);
-      } else {
-        // 일반 주사위 결과 후 - 라디오 재굴림 버튼 표시 여부 체크
-        if (isMyTurn && me && me.landmarks.radio && !radioUsedThisTurn) {
-          setTimeout(() => {
-            room.turnPhase = 'dice'; // 다시 주사위 페이즈로
-            updateGameScreen(room);
-          }, 1000);
-        } else {
-          // 건설 페이즈로 이동
-          setTimeout(() => {
-            room.turnPhase = 'build';
-            updateGameScreen(room);
-          }, 1000);
+    // 더블인지 확인
+    const rolledDouble = dice.length === 2 && dice[0] === dice[1];
+    
+    // 더블이 나오고 놀이공원이 있으면 추가 턴
+    if (!isDouble && rolledDouble && me && me.landmarks.park && isMyTurn) {
+      showLog('🎡 놀이공원 효과! 한 번 더 굴릴 수 있습니다');
+      setTimeout(() => {
+        // 놀이공원 재굴림 버튼들 표시
+        document.getElementById('roll1').style.display = 'block';
+        if (me.landmarks.station) {
+          document.getElementById('roll2').style.display = 'block';
         }
-      }
-    }, 1500);
+        document.getElementById('reroll').style.display = 'block';
+      }, 1000);
+    } else if (!isMyTurn) {
+      // 내 턴이 아니면 화면만 업데이트
+      updateGameScreen(room);
+    }
+    // 내 턴이면 processEffects에서 effectsProcessed를 emit하고
+    // 서버에서 gameState를 받아서 자동으로 build 페이즈로 전환됨
   }, 1000);
 });
 
@@ -246,6 +235,7 @@ socket.on('rerollInitiated', ({ room }) => {
 socket.on('gameState', (room) => {
   currentRoom = room;
   updateGameScreen(room);
+  console.log(`게임 상태 업데이트 - 턴: ${room.players[room.currentTurn].nickname}, 페이즈: ${room.turnPhase}`);
 });
 
 socket.on('turnChanged', ({ room }) => {
@@ -322,7 +312,6 @@ function updateGameScreen(room) {
   
   
   // 주사위 버튼
-  // 주사위 버튼
   if (isMyTurn && room.turnPhase === 'dice') {
     document.getElementById('roll1').style.display = 'block';
     
@@ -346,9 +335,20 @@ function updateGameScreen(room) {
   }
   
   
-  // 건설 버튼
-  document.getElementById('shopBtn').disabled = !(isMyTurn && room.turnPhase === 'build');
-  document.getElementById('endTurnBtn').disabled = !(isMyTurn && room.turnPhase === 'build');
+
+  // 건설 버튼 (내 턴이고 build 페이즈일 때만 활성화)
+  const canBuild = isMyTurn && room.turnPhase === 'build';
+  document.getElementById('shopBtn').disabled = !canBuild;
+  document.getElementById('endTurnBtn').disabled = !canBuild;
+  
+  // 버튼 스타일도 명확하게
+  if (canBuild) {
+    document.getElementById('shopBtn').classList.remove('disabled');
+    document.getElementById('endTurnBtn').classList.remove('disabled');
+  } else {
+    document.getElementById('shopBtn').classList.add('disabled');
+    document.getElementById('endTurnBtn').classList.add('disabled');
+  }
 }
 
 function renderLandmarks(landmarks) {
